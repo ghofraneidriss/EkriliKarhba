@@ -5,6 +5,8 @@ import '../../models/incident_item.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/status_badge.dart';
 import 'repair_details_screen.dart';
+import 'nearby_garages_screen.dart';
+import 'incident_map_screen.dart';
 
 class IncidentDetailsScreen extends StatefulWidget {
   final IncidentItem incident;
@@ -36,7 +38,8 @@ class _IncidentDetailsScreenState extends State<IncidentDetailsScreen> {
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -57,10 +60,12 @@ class _IncidentDetailsScreenState extends State<IncidentDetailsScreen> {
                             children: [
                               item.severity == IncidentSeverity.critique
                                   ? StatusBadge.critical()
-                                  : StatusBadge.upcoming(label: item.severityLabel),
+                                  : StatusBadge.upcoming(
+                                      label: item.severityLabel),
                               const Spacer(),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: item.status == IncidentStatus.resolu
                                       ? AppColors.greenLight
@@ -112,7 +117,8 @@ class _IncidentDetailsScreenState extends State<IncidentDetailsScreen> {
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.warning_rounded, color: AppColors.redDark, size: 24),
+                            Icon(Icons.warning_rounded,
+                                color: AppColors.redDark, size: 24),
                             SizedBox(width: 12),
                             Expanded(
                               child: Text(
@@ -169,11 +175,61 @@ class _IncidentDetailsScreenState extends State<IncidentDetailsScreen> {
                         children: [
                           _buildRow('Garage', item.assignedGarage!),
                           const Divider(height: 18),
-                          _buildRow('Technicien', item.assignedTechnician ?? 'Non désigné'),
+                          _buildRow('Technicien',
+                              item.assignedTechnician ?? 'Non désigné'),
                         ],
                       ),
 
                     const SizedBox(height: 24),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.car_repair),
+                        label: const Text('Trouver un garage à proximité'),
+                        onPressed: () async {
+                          var latitude = item.latitude;
+                          var longitude = item.longitude;
+                          if (latitude == null ||
+                              longitude == null ||
+                              latitude < -90 ||
+                              latitude > 90 ||
+                              longitude < -180 ||
+                              longitude > 180) {
+                            final selected =
+                                await Navigator.push<Map<String, double>>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const IncidentMapScreen(
+                                  requireExplicitSelection: true,
+                                ),
+                              ),
+                            );
+                            if (selected == null || !context.mounted) {
+                              return;
+                            }
+                            latitude = selected['latitude'];
+                            longitude = selected['longitude'];
+                          }
+                          if (latitude == null ||
+                              longitude == null ||
+                              !context.mounted) {
+                            return;
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => NearbyGaragesScreen(
+                                latitude: latitude!,
+                                longitude: longitude!,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
 
                     // Actions
                     SizedBox(
@@ -182,7 +238,8 @@ class _IncidentDetailsScreenState extends State<IncidentDetailsScreen> {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBlue,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
                         ),
                         onPressed: () {
                           Navigator.push(
@@ -211,12 +268,15 @@ class _IncidentDetailsScreenState extends State<IncidentDetailsScreen> {
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: AppColors.greenPrice),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
                           ),
                           onPressed: () {
                             _repo.resolveIncident(item.id);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Incident marqué comme résolu')),
+                              const SnackBar(
+                                  content:
+                                      Text('Incident marqué comme résolu')),
                             );
                             Navigator.pop(context);
                           },
@@ -243,7 +303,8 @@ class _IncidentDetailsScreenState extends State<IncidentDetailsScreen> {
     );
   }
 
-  Widget _buildSectionCard({required String title, required List<Widget> children}) {
+  Widget _buildSectionCard(
+      {required String title, required List<Widget> children}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),

@@ -26,6 +26,8 @@ class IncidentItem {
   final bool isImmobilized;
   final String? assignedGarage;
   final String? assignedTechnician;
+  final double? latitude;
+  final double? longitude;
 
   const IncidentItem({
     required this.id,
@@ -42,6 +44,8 @@ class IncidentItem {
     this.isImmobilized = false,
     this.assignedGarage,
     this.assignedTechnician,
+    this.latitude,
+    this.longitude,
   });
 
   String get severityLabel {

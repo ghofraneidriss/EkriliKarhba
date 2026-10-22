@@ -4,6 +4,7 @@ import '../../data/maintenance_repository.dart';
 import '../../models/incident_item.dart';
 import '../../models/vehicle.dart';
 import '../../widgets/custom_app_bar.dart';
+import 'incident_map_screen.dart';
 
 class ReportIncidentScreen extends StatefulWidget {
   const ReportIncidentScreen({super.key});
@@ -21,6 +22,8 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   final _descController = TextEditingController();
   IncidentSeverity _severity = IncidentSeverity.elevee;
   bool _isImmobilized = false;
+  double? _latitude;
+  double? _longitude;
 
   @override
   void initState() {
@@ -120,6 +123,46 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                     _buildLabel('Localisation du véhicule *'),
                     const SizedBox(height: 6),
                     _buildTextField(_locationController, 'Adresse ou lieu'),
+
+                    const SizedBox(height: 10),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.push<Map<String, double>>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => IncidentMapScreen(
+                                initialLatitude: _latitude,
+                                initialLongitude: _longitude,
+                              ),
+                            ),
+                          );
+
+                          if (result != null && context.mounted) {
+                            setState(() {
+                              _latitude = result['latitude'];
+                              _longitude = result['longitude'];
+                              _locationController.text =
+                                  '${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}';
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.map_outlined),
+                        label: const Text('Choisir la localisation sur la carte'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.1),
+                          foregroundColor: AppColors.primaryBlue,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: BorderSide(color: AppColors.primaryBlue.withValues(alpha: 0.3)),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
 
                     const SizedBox(height: 14),
 
@@ -224,7 +267,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     );
   }
 
-  void _submitIncident() {
+  Future<void> _submitIncident() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Veuillez renseigner un titre')),
@@ -247,9 +290,20 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
           ? _descController.text.trim()
           : 'Signalement transmis par le conducteur.',
       isImmobilized: _isImmobilized,
+      latitude: _latitude,
+      longitude: _longitude,
     );
 
-    _repo.addIncident(newInc);
+    try {
+      await _repo.addIncident(newInc);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d’enregistrer l’incident. Réessayez.')),
+      );
+      return;
+    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Incident enregistré avec succès')),
     );

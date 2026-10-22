@@ -3,6 +3,7 @@ import '../models/maintenance_item.dart';
 import '../models/vehicle.dart';
 import '../models/incident_item.dart';
 import 'mock_data.dart';
+import '../databases/database_helper.dart';
 
 class MaintenanceRepository extends ChangeNotifier {
   static final MaintenanceRepository _instance = MaintenanceRepository._internal();
@@ -12,6 +13,7 @@ class MaintenanceRepository extends ChangeNotifier {
     _vehicles = List.from(MockData.vehicles);
     _maintenances = List.from(MockData.maintenances);
     _incidents = List.from(MockData.incidents);
+    _loadSavedIncidents();
   }
 
   late List<Vehicle> _vehicles;
@@ -73,10 +75,54 @@ class MaintenanceRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addIncident(IncidentItem incident) {
+  Future<void> addIncident(IncidentItem incident) async {
+    await DatabaseHelper.instance.insertIncident(_incidentToRow(incident));
     _incidents.insert(0, incident);
     notifyListeners();
   }
+
+  Future<void> _loadSavedIncidents() async {
+    final rows = await DatabaseHelper.instance.getIncidents();
+    final saved = rows.where((row) => row['appIncidentId'] != null).map(_incidentFromRow).toList();
+    if (saved.isEmpty) return;
+    _incidents = [...saved, ..._incidents.where((item) => saved.every((s) => s.id != item.id))];
+    notifyListeners();
+  }
+
+  Map<String, dynamic> _incidentToRow(IncidentItem item) => {
+        'appIncidentId': item.id,
+        'title': item.title,
+        'description': item.description,
+        'severity': item.severity.name,
+        'status': item.status.name,
+        'latitude': item.latitude,
+        'longitude': item.longitude,
+        'createdAt': DateTime.now().toIso8601String(),
+        'vehicleModel': item.vehicleModel,
+        'vehiclePlate': item.vehiclePlate,
+        'timeAgo': item.timeAgo,
+        'date': item.date,
+        'mileage': item.mileage,
+        'location': item.location,
+        'isImmobilized': item.isImmobilized ? 1 : 0,
+      };
+
+  IncidentItem _incidentFromRow(Map<String, dynamic> row) => IncidentItem(
+        id: row['appIncidentId'] as String,
+        title: row['title'] as String,
+        vehicleModel: row['vehicleModel'] as String? ?? '',
+        vehiclePlate: row['vehiclePlate'] as String? ?? '',
+        timeAgo: row['timeAgo'] as String? ?? '',
+        severity: IncidentSeverity.values.firstWhere((v) => v.name == row['severity'], orElse: () => IncidentSeverity.faible),
+        status: IncidentStatus.values.firstWhere((v) => v.name == row['status'], orElse: () => IncidentStatus.ouvert),
+        date: row['date'] as String? ?? '',
+        mileage: row['mileage'] as int? ?? 0,
+        location: row['location'] as String? ?? '',
+        description: row['description'] as String? ?? '',
+        isImmobilized: row['isImmobilized'] == 1,
+        latitude: (row['latitude'] as num?)?.toDouble(),
+        longitude: (row['longitude'] as num?)?.toDouble(),
+      );
 
   void resolveIncident(String id) {
     final index = _incidents.indexWhere((i) => i.id == id);
@@ -98,6 +144,8 @@ class MaintenanceRepository extends ChangeNotifier {
         isImmobilized: false,
         assignedGarage: current.assignedGarage,
         assignedTechnician: current.assignedTechnician,
+        latitude: current.latitude,
+        longitude: current.longitude,
       );
       notifyListeners();
     }
