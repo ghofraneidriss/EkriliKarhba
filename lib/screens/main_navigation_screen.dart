@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import 'maintenance/maintenance_dashboard_screen.dart';
 import 'maintenance/maintenance_form_screen.dart';
+import '../features/vehicles/ui/vehicles_entry_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -15,7 +16,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   final List<Widget> _screens = [
     const _PlaceholderScreen(title: 'Dashboard'),
-    const _PlaceholderScreen(title: 'Véhicules'),
+    const VehiclesEntryScreen(),
     const _PlaceholderScreen(title: 'Réservations'),
     const MaintenanceDashboardScreen(),
     const _PlaceholderScreen(title: 'Profil'),
@@ -28,7 +29,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      floatingActionButton: Padding(
+      // Onglet Véhicules (index 1) : pas de bouton + de maintenance.
+      floatingActionButton: _currentIndex == 1
+          ? null
+          : Padding(
         padding: const EdgeInsets.only(bottom: 24.0, right: 8.0),
         child: SizedBox(
           width: 58,
