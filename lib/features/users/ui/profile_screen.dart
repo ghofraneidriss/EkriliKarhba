@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../domain/user_failures.dart';
 import '../services/user_service.dart';
 import 'admin_users_screen.dart';
+import 'login_screen.dart';
 
 /// Écran « Mon Profil » réutilisable pour les 3 rôles (ADMIN, AGENCE, CLIENT).
 /// Permet la consultation et la mise à jour des coordonnées personnelles et du mot de passe.
@@ -136,6 +137,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _saving = false;
         _globalError = 'Une erreur inattendue est survenue: $e';
       });
+    }
+  }
+
+  Future<void> _logout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Déconnexion'),
+        content: const Text('Voulez-vous vraiment vous déconnecter de votre compte ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Déconnexion'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      await _service.logout();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
     }
   }
 
@@ -459,6 +490,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         'Enregistrer les modifications',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.red,
+                  side: const BorderSide(color: AppColors.redBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: _saving ? null : _logout,
+                icon: const Icon(Icons.logout_rounded, size: 20),
+                label: const Text(
+                  'Se déconnecter',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),

@@ -29,7 +29,7 @@ void main() {
 
     repo = SqliteUserRepository(db, clock: () => now);
     service = UserService(repository: repo, clock: () => now);
-    await service.ensureInitialized();
+    await service.ensureInitialized(autoLoginDefaultAdmin: true);
   });
 
   tearDown(() async {
@@ -359,6 +359,158 @@ void main() {
         throwsA(isA<UserValidationFailure>()
             .having((e) => e.hasError('email'), 'email error', isTrue)),
       );
+    });
+  });
+
+  group('UserService - Authentification & Session', () {
+    test('un administrateur peut se connecter avec son email et son mot de passe', () async {
+      await service.logout();
+      expect(service.isAuthenticated, isFalse);
+
+      final loggedIn = await service.login(
+        email: 'admin@ekrili.tn',
+        password: 'Admin1234',
+      );
+
+      expect(loggedIn.email, 'admin@ekrili.tn');
+      expect(loggedIn.isAdmin, isTrue);
+      expect(service.currentUser?.id, loggedIn.id);
+      expect(service.isAuthenticated, isTrue);
+    });
+
+    test('une agence peut se connecter avec son propre email et son mot de passe', () async {
+      await service.logout();
+      final loggedIn = await service.login(
+        email: 'contact@automobility.tn',
+        password: 'Agence1234',
+      );
+
+      expect(loggedIn.email, 'contact@automobility.tn');
+      expect(loggedIn.isAgence, isTrue);
+      expect(loggedIn.nomAgence, 'Auto Mobility Tunis');
+      expect(service.currentUser?.id, loggedIn.id);
+    });
+
+    test('un client peut se connecter avec son propre email et son mot de passe', () async {
+      await service.logout();
+      final loggedIn = await service.login(
+        email: 'karim@gmail.com',
+        password: 'Client1234',
+      );
+
+      expect(loggedIn.email, 'karim@gmail.com');
+      expect(loggedIn.isClient, isTrue);
+      expect(service.currentUser?.id, loggedIn.id);
+    });
+
+    test('refuse la connexion avec un mot de passe erroné', () async {
+      await expectLater(
+        service.login(
+          email: 'admin@ekrili.tn',
+          password: 'MauvaisMotDePasse',
+        ),
+        throwsA(isA<UserAuthFailure>()
+            .having((e) => e.message, 'message', 'Email ou mot de passe incorrect.')),
+      );
+    });
+
+    test('refuse la connexion avec un email inexistant', () async {
+      await expectLater(
+        service.login(
+          email: 'inconnu@ekrili.tn',
+          password: 'Password123',
+        ),
+        throwsA(isA<UserAuthFailure>()
+            .having((e) => e.message, 'message', 'Email ou mot de passe incorrect.')),
+      );
+    });
+
+    test('refuse la connexion si un champ est vide', () async {
+      // Email vide → erreur de validation sur le champ 'email'
+      await expectLater(
+        service.login(email: '', password: 'Password123'),
+        throwsA(isA<UserValidationFailure>()
+            .having((e) => e.hasError('email'), 'email error', isTrue)),
+      );
+      // Mot de passe vide → erreur de validation sur le champ 'password'
+      await expectLater(
+        service.login(email: 'admin@ekrili.tn', password: ''),
+        throwsA(isA<UserValidationFailure>()
+            .having((e) => e.hasError('password'), 'password error', isTrue)),
+      );
+    });
+
+    test("refuse la connexion si l'email a un format invalide", () async {
+      await expectLater(
+        service.login(email: 'pas-un-email', password: 'Password123'),
+        throwsA(isA<UserValidationFailure>()
+            .having((e) => e.hasError('email'), 'email error', isTrue)),
+      );
+    });
+
+    test('refuse la connexion si le compte est désactivé', () async {
+      await service.setStatus(
+        userId: 5,
+        newStatus: UserStatus.desactive,
+        actor: service.currentUser!,
+      );
+
+      await expectLater(
+        service.login(
+          email: 'karim@gmail.com',
+          password: 'Client1234',
+        ),
+        throwsA(isA<UserAuthFailure>()
+            .having((e) => e.message, 'message', contains('désactivé'))),
+      );
+    });
+
+    test('refuse la connexion si le compte est banni', () async {
+      await service.setStatus(
+        userId: 6,
+        newStatus: UserStatus.banni,
+        actor: service.currentUser!,
+      );
+
+      await expectLater(
+        service.login(
+          email: 'fatma@gmail.com',
+          password: 'Client1234',
+        ),
+        throwsA(isA<UserAuthFailure>()
+            .having((e) => e.message, 'message', contains('banni'))),
+      );
+    });
+
+    test('logout() efface la session persistante et réinitialise le currentUser', () async {
+      await service.login(
+        email: 'admin@ekrili.tn',
+        password: 'Admin1234',
+      );
+      expect(service.currentUser, isNotNull);
+
+      await service.logout();
+      expect(service.currentUser, isNull);
+      expect(service.isAuthenticated, isFalse);
+
+      final sessionUserId = await repo.getActiveSessionUserId();
+      expect(sessionUserId, isNull);
+    });
+
+    test('la session active est persistée et restaurée via ensureInitialized()', () async {
+      await service.login(
+        email: 'contact@automobility.tn',
+        password: 'Agence1234',
+      );
+      final loggedInId = service.currentUser!.id!;
+
+      final newService = UserService(repository: repo, clock: () => now);
+      expect(newService.currentUser, isNull);
+
+      await newService.ensureInitialized();
+      expect(newService.currentUser, isNotNull);
+      expect(newService.currentUser!.id, loggedInId);
+      expect(newService.currentUser!.isAgence, isTrue);
     });
   });
 }

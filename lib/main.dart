@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
 import 'features/users/services/user_service.dart';
+import 'features/users/ui/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
 
 void main() async {
@@ -25,7 +26,9 @@ class EkriliKarhbaApp extends StatelessWidget {
       title: 'Ekrili Karhba',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const MainNavigationScreen(),
+      home: UserService.instance.isAuthenticated
+          ? const MainNavigationScreen()
+          : const LoginScreen(),
     );
   }
 }

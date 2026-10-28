@@ -9,5 +9,6 @@ export 'domain/user_security_rules.dart';
 export 'domain/user_validators.dart';
 export 'services/user_service.dart';
 export 'ui/admin_users_screen.dart';
+export 'ui/login_screen.dart';
 export 'ui/profile_screen.dart';
 export 'ui/user_form_screen.dart';

@@ -45,3 +45,9 @@ class UserConflictFailure extends UserFailure {
   final String field;
 }
 
+/// Erreur d'authentification (identifiants invalides, compte désactivé ou banni).
+class UserAuthFailure extends UserFailure {
+  const UserAuthFailure(super.message);
+}
+
+

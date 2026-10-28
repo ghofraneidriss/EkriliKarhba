@@ -43,5 +43,14 @@ abstract class UserRepository {
 
   /// Récupère l'historique d'audit des actions relatives à un utilisateur.
   Future<List<Map<String, dynamic>>> getUserHistory(int userId);
+
+  /// Enregistre l'identifiant de session active persistante.
+  Future<void> saveActiveSession(int userId);
+
+  /// Récupère l'identifiant de la session active sauvegardée, ou null si aucune.
+  Future<int?> getActiveSessionUserId();
+
+  /// Supprime la session active sauvegardée (déconnexion).
+  Future<void> clearActiveSession();
 }
 

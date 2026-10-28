@@ -36,5 +36,12 @@ class UserApi {
     final user = await _service.getUserById(id);
     return user != null && user.isActif;
   }
+
+  /// Connecte un utilisateur (Admin, Agence, Client).
+  Future<User> login({required String email, required String password}) =>
+      _service.login(email: email, password: password);
+
+  /// Déconnecte la session active.
+  Future<void> logout() => _service.logout();
 }
 

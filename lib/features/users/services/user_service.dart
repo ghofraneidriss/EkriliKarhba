@@ -38,20 +38,94 @@ class UserService extends ChangeNotifier {
   /// Utilisateur actuellement connecté dans l'application.
   User? get currentUser => _currentUser;
 
+  /// Indique si une session utilisateur est active.
+  bool get isAuthenticated => _currentUser != null;
+
   /// Modifie l'utilisateur courant (utilisé pour les tests ou la session).
   void setCurrentUser(User? user) {
     _currentUser = user;
     notifyListeners();
   }
 
-  /// Initialise la session avec le compte admin par défaut s'il n'y a pas d'utilisateur connecté.
-  Future<void> ensureInitialized() async {
+  /// Initialise la session : restaure la session active sauvegardée si présente.
+  /// En mode test ou démo, [autoLoginDefaultAdmin] permet de connecter
+  /// automatiquement l'admin id 1 si aucune session n'est enregistrée.
+  Future<void> ensureInitialized({bool autoLoginDefaultAdmin = false}) async {
     if (_currentUser == null) {
-      final defaultAdmin = await _repo.getById(1);
-      if (defaultAdmin != null) {
-        _currentUser = defaultAdmin;
+      final savedUserId = await _repo.getActiveSessionUserId();
+      if (savedUserId != null) {
+        final savedUser = await _repo.getById(savedUserId);
+        if (savedUser != null && savedUser.canLogin) {
+          _currentUser = savedUser;
+          return;
+        } else {
+          await _repo.clearActiveSession();
+        }
+      }
+
+      if (autoLoginDefaultAdmin) {
+        final defaultAdmin = await _repo.getById(1);
+        if (defaultAdmin != null && defaultAdmin.canLogin) {
+          _currentUser = defaultAdmin;
+          await _repo.saveActiveSession(defaultAdmin.id!);
+        }
       }
     }
+  }
+
+  /// Authentifie un utilisateur par son email et son mot de passe.
+  /// Fonctionne pour les 3 rôles : ADMIN, AGENCE et CLIENT.
+  Future<User> login({
+    required String email,
+    required String password,
+  }) async {
+    // 1. Contrôle de saisie strict côté serveur (présence, format email, présence mot de passe)
+    final validation = UserValidators.validateLogin(
+      email: email,
+      password: password,
+    );
+    if (validation.hasErrors) {
+      throw UserValidationFailure(validation.errors);
+    }
+
+    final cleanEmail = UserValidators.normalizeEmail(email);
+    final user = await _repo.getByEmail(cleanEmail);
+    if (user == null) {
+      throw const UserAuthFailure('Email ou mot de passe incorrect.');
+    }
+
+    final passwordMatches = PasswordHasher.verifyPassword(
+      password,
+      user.passwordSalt,
+      user.motDePasse,
+    );
+
+    if (!passwordMatches) {
+      throw const UserAuthFailure('Email ou mot de passe incorrect.');
+    }
+
+    if (user.isBanni) {
+      throw const UserAuthFailure('Votre compte a été banni. Veuillez contacter le support.');
+    }
+
+    if (user.isDesactive) {
+      throw const UserAuthFailure('Votre compte est désactivé. Veuillez contacter un administrateur.');
+    }
+
+    _currentUser = user;
+    if (user.id != null) {
+      await _repo.saveActiveSession(user.id!);
+    }
+
+    notifyListeners();
+    return user;
+  }
+
+  /// Déconnecte l'utilisateur courant et efface la session persistante.
+  Future<void> logout() async {
+    _currentUser = null;
+    await _repo.clearActiveSession();
+    notifyListeners();
   }
 
   /// Création d'un utilisateur par un administrateur.

@@ -273,5 +273,23 @@ class UserValidators {
 
     return ValidationResult(errors);
   }
+
+  /// Validation des identifiants lors de la connexion.
+  /// Vérifie la présence et le format de l'adresse email ainsi que la présence du mot de passe.
+  static ValidationResult validateLogin({
+    required String? email,
+    required String? password,
+  }) {
+    final errors = <String, String>{};
+
+    final emailErr = validateEmail(email);
+    if (emailErr != null) errors['email'] = emailErr;
+
+    if (password == null || password.isEmpty) {
+      errors['password'] = 'Le mot de passe est obligatoire';
+    }
+
+    return ValidationResult(errors);
+  }
 }
 

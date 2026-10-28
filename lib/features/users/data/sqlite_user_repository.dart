@@ -301,5 +301,49 @@ class SqliteUserRepository implements UserRepository {
       orderBy: 'timestamp DESC',
     );
   }
+
+  @override
+  Future<void> saveActiveSession(int userId) async {
+    final db = await _db;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS app_session (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        user_id INTEGER NOT NULL
+      );
+    ''');
+    await db.rawInsert('''
+      INSERT OR REPLACE INTO app_session (id, user_id) VALUES (1, ?);
+    ''', [userId]);
+  }
+
+  @override
+  Future<int?> getActiveSessionUserId() async {
+    final db = await _db;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS app_session (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        user_id INTEGER NOT NULL
+      );
+    ''');
+    final rows = await db.query(
+      'app_session',
+      where: 'id = 1',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['user_id'] as int?;
+  }
+
+  @override
+  Future<void> clearActiveSession() async {
+    final db = await _db;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS app_session (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        user_id INTEGER NOT NULL
+      );
+    ''');
+    await db.delete('app_session', where: 'id = 1');
+  }
 }
 
