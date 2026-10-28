@@ -26,3 +26,5 @@
 .idea/
 *.iml
 
+# Widget Preview related
+.widget_preview/
