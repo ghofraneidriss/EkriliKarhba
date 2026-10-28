@@ -232,6 +232,7 @@ class UserService extends ChangeNotifier {
     required String nom,
     required String prenom,
     required String telephone,
+    String? email,
     String? nomAgence,
     String? adresseAgence,
     String? oldPassword,
@@ -249,11 +250,14 @@ class UserService extends ChangeNotifier {
       throw UserNotFoundFailure('Utilisateur introuvable (id: $id).');
     }
 
-    // Validation nom, prénom, téléphone et champs agence
+    final targetEmail = email ?? existing.email;
+
+    // Validation nom, prénom, email, téléphone et champs agence
     final validation = UserValidators.validateProfileUpdate(
       nom: nom,
       prenom: prenom,
       telephone: telephone,
+      email: targetEmail,
       nouveauMotDePasse: newPassword,
       nomAgence: existing.isAgence ? nomAgence : null,
       adresseAgence: existing.isAgence ? adresseAgence : null,
@@ -261,6 +265,14 @@ class UserService extends ChangeNotifier {
     );
 
     final errors = Map<String, String>.from(validation.errors);
+
+    // Vérification de l'unicité de l'email si modifié
+    final normalizedEmail = UserValidators.normalizeEmail(targetEmail);
+    if (normalizedEmail != existing.email.toLowerCase()) {
+      if (await _repo.emailExists(normalizedEmail, excludeId: id)) {
+        errors['email'] = 'Cette adresse email est déjà associée à un autre compte.';
+      }
+    }
 
     // Gestion du changement de mot de passe
     String newHash = existing.motDePasse;
@@ -289,6 +301,7 @@ class UserService extends ChangeNotifier {
     final updated = existing.copyWith(
       nom: nom.trim(),
       prenom: prenom.trim(),
+      email: normalizedEmail,
       telephone: UserValidators.normalizePhone(telephone),
       nomAgence: existing.isAgence ? nomAgence?.trim() : existing.nomAgence,
       adresseAgence: existing.isAgence ? adresseAgence?.trim() : existing.adresseAgence,

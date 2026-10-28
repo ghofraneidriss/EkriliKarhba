@@ -328,6 +328,38 @@ void main() {
             .having((e) => e.hasError('oldPassword'), 'oldPassword error', isTrue)),
       );
     });
+
+    test("un utilisateur peut modifier son adresse email si elle est disponible", () async {
+      final admin = service.currentUser!;
+      final updated = await service.updateOwnProfile(
+        id: admin.id!,
+        nom: admin.nom,
+        prenom: admin.prenom,
+        email: 'nouvel.admin@ekrili.tn',
+        telephone: admin.telephone,
+        actor: admin,
+      );
+
+      expect(updated.email, 'nouvel.admin@ekrili.tn');
+      expect(service.currentUser!.email, 'nouvel.admin@ekrili.tn');
+    });
+
+    test("refuse la modification de son email vers un email déjà pris", () async {
+      final admin = service.currentUser!;
+
+      await expectLater(
+        service.updateOwnProfile(
+          id: admin.id!,
+          nom: admin.nom,
+          prenom: admin.prenom,
+          email: 'contact@automobility.tn', // déjà pris par agence Tunis
+          telephone: admin.telephone,
+          actor: admin,
+        ),
+        throwsA(isA<UserValidationFailure>()
+            .having((e) => e.hasError('email'), 'email error', isTrue)),
+      );
+    });
   });
 }
 

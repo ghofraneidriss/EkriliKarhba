@@ -85,6 +85,7 @@ class SqliteUserRepository implements UserRepository {
       if (current != null) {
         if (current.nom != candidate.nom) changes.add('Nom');
         if (current.prenom != candidate.prenom) changes.add('Prénom');
+        if (current.email != candidate.email) changes.add('Email');
         if (current.telephone != candidate.telephone) changes.add('Téléphone');
         if (current.nomAgence != candidate.nomAgence) changes.add("Nom d'agence");
         if (current.adresseAgence != candidate.adresseAgence) changes.add("Adresse d'agence");

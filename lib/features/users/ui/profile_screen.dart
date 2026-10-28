@@ -20,6 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   late final TextEditingController _nom;
   late final TextEditingController _prenom;
+  late final TextEditingController _email;
   late final TextEditingController _telephone;
   late final TextEditingController _nomAgence;
   late final TextEditingController _adresseAgence;
@@ -38,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final u = _service.currentUser;
     _nom = TextEditingController(text: u?.nom ?? '');
     _prenom = TextEditingController(text: u?.prenom ?? '');
+    _email = TextEditingController(text: u?.email ?? '');
     _telephone = TextEditingController(text: u?.telephone ?? '');
     _nomAgence = TextEditingController(text: u?.nomAgence ?? '');
     _adresseAgence = TextEditingController(text: u?.adresseAgence ?? '');
@@ -62,6 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (u != null && mounted) {
       if (_nom.text != u.nom) _nom.text = u.nom;
       if (_prenom.text != u.prenom) _prenom.text = u.prenom;
+      if (_email.text != u.email) _email.text = u.email;
       if (_telephone.text != u.telephone) _telephone.text = u.telephone;
       if (u.nomAgence != null && _nomAgence.text != u.nomAgence) {
         _nomAgence.text = u.nomAgence!;
@@ -77,6 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _service.removeListener(_syncUser);
     _nom.dispose();
     _prenom.dispose();
+    _email.dispose();
     _telephone.dispose();
     _nomAgence.dispose();
     _adresseAgence.dispose();
@@ -101,6 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         id: currentUser.id!,
         nom: _nom.text,
         prenom: _prenom.text,
+        email: _email.text,
         telephone: _telephone.text,
         nomAgence: currentUser.isAgence ? _nomAgence.text : null,
         adresseAgence: currentUser.isAgence ? _adresseAgence.text : null,
@@ -332,15 +337,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   children: [
                     _ReadOnlyRow(
-                      label: 'Adresse email',
-                      value: user.email,
-                      icon: Icons.email_outlined,
-                    ),
-                    const Divider(height: 18),
-                    _ReadOnlyRow(
                       label: 'Rôle attribué',
                       value: user.role.label,
                       icon: Icons.shield_outlined,
+                    ),
+                    const Divider(height: 18),
+                    _ReadOnlyRow(
+                      label: 'Statut du compte',
+                      value: user.statut.label,
+                      icon: Icons.info_outline,
                     ),
                   ],
                 ),
@@ -365,6 +370,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label: 'Nom',
                 controller: _nom,
                 fieldKey: 'nom',
+              ),
+              _buildField(
+                label: 'Adresse email',
+                controller: _email,
+                fieldKey: 'email',
+                keyboardType: TextInputType.emailAddress,
               ),
               _buildField(
                 label: 'Téléphone',

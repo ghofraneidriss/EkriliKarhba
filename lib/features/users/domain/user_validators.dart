@@ -231,11 +231,12 @@ class UserValidators {
   }
 
   /// Validation lors de la mise à jour de son propre profil
-  /// (l'utilisateur peut modifier nom, prenom, telephone, et éventuellement mot de passe).
+  /// (l'utilisateur peut modifier nom, prenom, email, telephone, et éventuellement mot de passe).
   static ValidationResult validateProfileUpdate({
     required String nom,
     required String prenom,
     required String telephone,
+    String? email,
     String? nouveauMotDePasse,
     String? nomAgence,
     String? adresseAgence,
@@ -248,6 +249,11 @@ class UserValidators {
 
     final prenomErr = validatePrenom(prenom);
     if (prenomErr != null) errors['prenom'] = prenomErr;
+
+    if (email != null) {
+      final emailErr = validateEmail(email);
+      if (emailErr != null) errors['email'] = emailErr;
+    }
 
     final telErr = validateTelephone(telephone);
     if (telErr != null) errors['telephone'] = telErr;
