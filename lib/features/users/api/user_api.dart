@@ -41,6 +41,30 @@ class UserApi {
   Future<User> login({required String email, required String password}) =>
       _service.login(email: email, password: password);
 
+  /// Inscrit un nouvel utilisateur (Client ou Agence).
+  Future<User> register({
+    required String nom,
+    required String prenom,
+    required String email,
+    required String motDePasse,
+    required String confirmationMotDePasse,
+    required String telephone,
+    required UserRole role,
+    String? nomAgence,
+    String? adresseAgence,
+  }) =>
+      _service.register(
+        nom: nom,
+        prenom: prenom,
+        email: email,
+        motDePasse: motDePasse,
+        confirmationMotDePasse: confirmationMotDePasse,
+        telephone: telephone,
+        role: role,
+        nomAgence: nomAgence,
+        adresseAgence: adresseAgence,
+      );
+
   /// Déconnecte la session active.
   Future<void> logout() => _service.logout();
 }

@@ -11,4 +11,5 @@ export 'services/user_service.dart';
 export 'ui/admin_users_screen.dart';
 export 'ui/login_screen.dart';
 export 'ui/profile_screen.dart';
+export 'ui/register_screen.dart';
 export 'ui/user_form_screen.dart';

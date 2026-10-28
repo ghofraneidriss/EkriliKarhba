@@ -42,5 +42,14 @@ void main() {
     expect(find.text('Ekrili Karhba'), findsOneWidget);
     expect(find.text('Connexion à votre espace'), findsOneWidget);
     expect(find.text('Se connecter'), findsOneWidget);
+    expect(find.text('Pas encore de compte ?'), findsOneWidget);
+    expect(find.text("S'inscrire"), findsOneWidget);
+
+    await tester.tap(find.text("S'inscrire"));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Créer un compte'), findsOneWidget);
+    expect(find.text('Client'), findsOneWidget);
+    expect(find.text('Agence'), findsOneWidget);
   });
 }

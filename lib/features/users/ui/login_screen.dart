@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../screens/main_navigation_screen.dart';
 import '../domain/user_failures.dart';
 import '../services/user_service.dart';
+import 'register_screen.dart';
 
 /// Écran de connexion universel pour ADMIN, AGENCE et CLIENT.
 /// Permet l'authentification avec Email et Mot de passe, avec raccourcis
@@ -264,6 +265,52 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Lien vers Inscription
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      const Text(
+                        'Pas encore de compte ?',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final registeredEmail = await Navigator.of(context).push<String>(
+                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                          );
+                          if (registeredEmail != null && context.mounted) {
+                            setState(() {
+                              _emailController.text = registeredEmail;
+                              _passwordController.clear();
+                              _fieldErrors = const {};
+                              _errorMessage = null;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Compte créé avec succès ! Veuillez vous connecter.'),
+                                backgroundColor: AppColors.green,
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text(
+                          "S'inscrire",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryBlue,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -513,5 +513,135 @@ void main() {
       expect(newService.currentUser!.isAgence, isTrue);
     });
   });
+
+  group('UserService - Inscription libre-service (Register)', () {
+    test("un client peut s'inscrire en libre-service et son compte est actif immédiatement", () async {
+      final client = await service.register(
+        nom: 'Driss',
+        prenom: 'Tarek',
+        email: 'tarek.driss@gmail.com',
+        motDePasse: 'Tarek@1234',
+        confirmationMotDePasse: 'Tarek@1234',
+        telephone: '25112233',
+        role: UserRole.client,
+      );
+
+      expect(client.id, isNotNull);
+      expect(client.email, 'tarek.driss@gmail.com');
+      expect(client.role, UserRole.client);
+      expect(client.statut, UserStatus.actif);
+      expect(client.isActif, isTrue);
+      expect(client.canLogin, isTrue);
+
+      // Vérifie que le mot de passe est bien haché
+      expect(
+        PasswordHasher.verifyPassword('Tarek@1234', client.passwordSalt, client.motDePasse),
+        isTrue,
+      );
+
+      // Vérifie qu'il peut se connecter immédiatement
+      final loggedIn = await service.login(
+        email: 'tarek.driss@gmail.com',
+        password: 'Tarek@1234',
+      );
+      expect(loggedIn.id, client.id);
+    });
+
+    test("une agence peut s'inscrire avec ses coordonnées professionnelles", () async {
+      final agence = await service.register(
+        nom: 'Hammami',
+        prenom: 'Wassim',
+        email: 'contact@carthagerent.tn',
+        motDePasse: 'Carthage@1234',
+        confirmationMotDePasse: 'Carthage@1234',
+        telephone: '71987654',
+        role: UserRole.agence,
+        nomAgence: 'Carthage Rent',
+        adresseAgence: 'Les Berges du Lac 2, Tunis',
+      );
+
+      expect(agence.id, isNotNull);
+      expect(agence.isAgence, isTrue);
+      expect(agence.statut, UserStatus.actif);
+      expect(agence.nomAgence, 'Carthage Rent');
+      expect(agence.adresseAgence, 'Les Berges du Lac 2, Tunis');
+
+      // Vérifie qu'elle peut se connecter immédiatement
+      final loggedIn = await service.login(
+        email: 'contact@carthagerent.tn',
+        password: 'Carthage@1234',
+      );
+      expect(loggedIn.id, agence.id);
+      expect(loggedIn.isAgence, isTrue);
+    });
+
+    test("interdit l'inscription en tant qu'administrateur", () async {
+      await expectLater(
+        service.register(
+          nom: 'Hacker',
+          prenom: 'Joe',
+          email: 'hacker@ekrili.tn',
+          motDePasse: 'Admin@1234',
+          confirmationMotDePasse: 'Admin@1234',
+          telephone: '20112233',
+          role: UserRole.admin,
+        ),
+        throwsA(isA<UserRuleFailure>()),
+      );
+    });
+
+    test("refuse l'inscription si les mots de passe ne correspondent pas", () async {
+      await expectLater(
+        service.register(
+          nom: 'Gharbi',
+          prenom: 'Walid',
+          email: 'walid@gmail.com',
+          motDePasse: 'Secret@123',
+          confirmationMotDePasse: 'DifferentPassword@123',
+          telephone: '22112233',
+          role: UserRole.client,
+        ),
+        throwsA(isA<UserValidationFailure>()
+            .having((e) => e.hasError('confirmationMotDePasse'), 'confirmationMotDePasse error', isTrue)),
+      );
+    });
+
+    test("refuse l'inscription si l'email existe déjà", () async {
+      await expectLater(
+        service.register(
+          nom: 'Doublon',
+          prenom: 'Test',
+          email: 'admin@ekrili.tn', // déjà présent
+          motDePasse: 'Valid@1234',
+          confirmationMotDePasse: 'Valid@1234',
+          telephone: '23112233',
+          role: UserRole.client,
+        ),
+        throwsA(isA<UserConflictFailure>()
+            .having((e) => e.field, 'field', 'email')),
+      );
+    });
+
+    test("refuse l'inscription d'une agence sans nom d'agence ou sans adresse", () async {
+      await expectLater(
+        service.register(
+          nom: 'Agence',
+          prenom: 'Incomplète',
+          email: 'incomplète@agence.tn',
+          motDePasse: 'Valid@1234',
+          confirmationMotDePasse: 'Valid@1234',
+          telephone: '71112233',
+          role: UserRole.agence,
+          nomAgence: '',
+          adresseAgence: '',
+        ),
+        throwsA(isA<UserValidationFailure>().having(
+          (e) => e.hasError('nomAgence') && e.hasError('adresseAgence'),
+          'agency fields required',
+          isTrue,
+        )),
+      );
+    });
+  });
 }
 

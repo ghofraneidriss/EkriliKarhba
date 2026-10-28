@@ -291,5 +291,54 @@ class UserValidators {
 
     return ValidationResult(errors);
   }
+
+  /// Validation lors de l'auto-inscription d'un utilisateur (CLIENT ou AGENCE uniquement).
+  /// Les ADMINS ne peuvent pas s'inscrire en libre-service.
+  static ValidationResult validateRegister({
+    required String nom,
+    required String prenom,
+    required String email,
+    required String motDePasse,
+    required String confirmationMotDePasse,
+    required String telephone,
+    required UserRole role,
+    String? nomAgence,
+    String? adresseAgence,
+  }) {
+    final errors = <String, String>{};
+
+    if (role == UserRole.admin) {
+      errors['role'] = "L'inscription en tant qu'administrateur n'est pas autorisée.";
+    }
+
+    final nomErr = validateNom(nom);
+    if (nomErr != null) errors['nom'] = nomErr;
+
+    final prenomErr = validatePrenom(prenom);
+    if (prenomErr != null) errors['prenom'] = prenomErr;
+
+    final emailErr = validateEmail(email);
+    if (emailErr != null) errors['email'] = emailErr;
+
+    final pwdErr = validatePassword(motDePasse);
+    if (pwdErr != null) errors['motDePasse'] = pwdErr;
+
+    if (confirmationMotDePasse.isEmpty) {
+      errors['confirmationMotDePasse'] = 'Veuillez confirmer votre mot de passe';
+    } else if (motDePasse != confirmationMotDePasse) {
+      errors['confirmationMotDePasse'] = 'Les mots de passe ne correspondent pas';
+    }
+
+    final telErr = validateTelephone(telephone);
+    if (telErr != null) errors['telephone'] = telErr;
+
+    final agencyNameErr = validateNomAgence(nomAgence, role);
+    if (agencyNameErr != null) errors['nomAgence'] = agencyNameErr;
+
+    final agencyAddrErr = validateAdresseAgence(adresseAgence, role);
+    if (agencyAddrErr != null) errors['adresseAgence'] = agencyAddrErr;
+
+    return ValidationResult(errors);
+  }
 }
 

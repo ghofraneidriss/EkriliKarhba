@@ -128,6 +128,76 @@ class UserService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Inscription en libre-service d'un nouvel utilisateur (CLIENT ou AGENCE uniquement).
+  /// Les comptes créés sont actifs immédiatement, conformément aux spécifications.
+  Future<User> register({
+    required String nom,
+    required String prenom,
+    required String email,
+    required String motDePasse,
+    required String confirmationMotDePasse,
+    required String telephone,
+    required UserRole role,
+    String? nomAgence,
+    String? adresseAgence,
+  }) async {
+    // 1. Restriction stricte des rôles : seuls CLIENT et AGENCE peuvent s'inscrire
+    if (role == UserRole.admin) {
+      throw const UserRuleFailure("L'inscription en tant qu'administrateur n'est pas autorisée.");
+    }
+
+    // 2. Contrôle de saisie strict côté serveur
+    final validation = UserValidators.validateRegister(
+      nom: nom,
+      prenom: prenom,
+      email: email,
+      motDePasse: motDePasse,
+      confirmationMotDePasse: confirmationMotDePasse,
+      telephone: telephone,
+      role: role,
+      nomAgence: nomAgence,
+      adresseAgence: adresseAgence,
+    );
+
+    if (validation.hasErrors) {
+      throw UserValidationFailure(validation.errors);
+    }
+
+    // 3. Vérification unicité email
+    final normalizedEmail = UserValidators.normalizeEmail(email);
+    if (await _repo.emailExists(normalizedEmail)) {
+      throw const UserConflictFailure('email', 'Cette adresse email est déjà associée à un compte.');
+    }
+
+    // 4. Hachage sécurisé du mot de passe avec sel cryptographique
+    final salt = PasswordHasher.generateSalt();
+    final hashedPassword = PasswordHasher.hashPassword(motDePasse, salt);
+
+    final now = _clock();
+    final user = User(
+      nom: nom.trim(),
+      prenom: prenom.trim(),
+      email: normalizedEmail,
+      motDePasse: hashedPassword,
+      passwordSalt: salt,
+      telephone: UserValidators.normalizePhone(telephone),
+      role: role,
+      statut: UserStatus.actif,
+      nomAgence: role == UserRole.agence ? nomAgence?.trim() : null,
+      adresseAgence: role == UserRole.agence ? adresseAgence?.trim() : null,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    final created = await _repo.insertUser(
+      user,
+      actor: 'Auto-inscription (${role.label})',
+      comment: 'Création de compte libre-service',
+    );
+    notifyListeners();
+    return created;
+  }
+
   /// Création d'un utilisateur par un administrateur.
   Future<User> createUser({
     required String nom,
