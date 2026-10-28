@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
+import '../features/users/ui/admin_users_screen.dart';
+import '../features/users/ui/profile_screen.dart';
+import '../features/vehicles/ui/vehicles_entry_screen.dart';
 import 'maintenance/maintenance_dashboard_screen.dart';
 import 'maintenance/maintenance_form_screen.dart';
-import '../features/vehicles/ui/vehicles_entry_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -12,14 +14,14 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 3; // Maintenance is 4th tab (index 3) matching screenshot
+  int _currentIndex = 3; // Maintenance (index 3) pour les tests widget par défaut
 
   final List<Widget> _screens = [
-    const _PlaceholderScreen(title: 'Dashboard'),
+    const AdminUsersScreen(),
     const VehiclesEntryScreen(),
     const _PlaceholderScreen(title: 'Réservations'),
     const MaintenanceDashboardScreen(),
-    const _PlaceholderScreen(title: 'Profil'),
+    const ProfileScreen(),
   ];
 
   @override
@@ -29,8 +31,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      // Onglet Véhicules (index 1) : pas de bouton + de maintenance.
-      floatingActionButton: _currentIndex == 1
+      // Onglets Dashboard (0), Véhicules (1) et Profil (4) : pas de bouton + de maintenance.
+      floatingActionButton: (_currentIndex == 0 || _currentIndex == 1 || _currentIndex == 4)
           ? null
           : Padding(
         padding: const EdgeInsets.only(bottom: 24.0, right: 8.0),
@@ -38,6 +40,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           width: 58,
           height: 58,
           child: FloatingActionButton(
+            heroTag: 'mainNavMaintenanceFab',
             onPressed: () {
               Navigator.push(
                 context,

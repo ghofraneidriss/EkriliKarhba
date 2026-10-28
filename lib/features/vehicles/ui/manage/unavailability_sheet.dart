@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../domain/actor.dart';
 import '../../domain/unavailability_period.dart';
-import '../../services/demo_session.dart';
 import '../../services/fleet_service.dart';
 import '../feedback.dart';
 import '../widgets/availability_calendar.dart';
@@ -68,7 +68,7 @@ class _UnavailabilitySheetState extends State<_UnavailabilitySheet> {
           end: _end ?? start,
           reason: _reason,
         ),
-        DemoSession.instance.actor,
+        const Actor.admin(),
       );
       if (!mounted) return;
       Navigator.of(context).pop();

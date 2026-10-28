@@ -3,13 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../users/domain/user.dart';
 import '../../domain/actor.dart';
-import '../../domain/agency.dart';
 import '../../domain/enums.dart';
 import '../../domain/fleet_vehicle.dart';
 import '../../domain/vehicle_category.dart';
 import '../../domain/vehicle_filter.dart';
-import '../../services/demo_session.dart';
 import '../../services/fleet_service.dart';
 import '../details/vehicle_details_screen.dart';
 import '../widgets/availability_calendar.dart';
@@ -36,7 +35,7 @@ class _ClientCatalogViewState extends State<ClientCatalogView> {
 
   VehicleFilter _filter = const VehicleFilter();
   List<FleetVehicle> _vehicles = const [];
-  Map<String, Agency> _agencies = const {};
+  Map<int, User> _agencies = const {};
   List<VehicleCategory> _categories = const [];
   List<String> _cities = const [];
   bool _loading = true;
@@ -154,8 +153,8 @@ class _ClientCatalogViewState extends State<ClientCatalogView> {
   Widget _buildHeader() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Expanded(
+      children: const [
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -174,11 +173,6 @@ class _ClientCatalogViewState extends State<ClientCatalogView> {
               ),
             ],
           ),
-        ),
-        TextButton.icon(
-          onPressed: DemoSession.instance.signOut,
-          icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-          label: const Text('Changer'),
         ),
       ],
     );
@@ -440,9 +434,11 @@ class _ClientCatalogViewState extends State<ClientCatalogView> {
     return null;
   }
 
-  String? _agencyLabel(String id) {
+  String? _agencyLabel(int id) {
     final agency = _agencies[id];
-    return agency == null ? null : '${agency.name} · ${agency.city}';
+    return agency == null
+        ? null
+        : '${agency.displayName} · ${agency.adresseAgence ?? ''}';
   }
 }
 

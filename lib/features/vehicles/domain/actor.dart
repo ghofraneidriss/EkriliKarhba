@@ -1,13 +1,13 @@
-import 'enums.dart';
+import '../../users/domain/user.dart';
 
-/// Qui fait l'action : le profil et, pour une agence, son identifiant.
+/// Qui fait l'action : le profil et, pour une agence, son identifiant utilisateur.
 /// Sert aux contrôles de droits et à l'historique.
 class Actor {
   const Actor._(this.role, this.agencyId, this.systemName);
 
-  const Actor.client() : this._(UserRole.client, null, null);
-  const Actor.admin() : this._(UserRole.admin, null, null);
-  const Actor.agency(String agencyId)
+  const Actor.client([int? clientId]) : this._(UserRole.client, clientId, null);
+  const Actor.admin([int? adminId]) : this._(UserRole.admin, adminId, null);
+  const Actor.agency(int agencyId)
       : this._(UserRole.agence, agencyId, null);
 
   /// Action déclenchée par un autre module (Réservations, Maintenance…)
@@ -16,7 +16,7 @@ class Actor {
       : this._(UserRole.admin, null, moduleName);
 
   final UserRole role;
-  final String? agencyId;
+  final int? agencyId;
   final String? systemName;
 
   bool get isAdmin => role == UserRole.admin;

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../domain/agency.dart';
+import '../../../users/domain/user.dart';
+import '../../domain/actor.dart';
 import '../../domain/document_alert.dart';
 import '../../domain/enums.dart';
 import '../../domain/fleet_dates.dart';
 import '../../domain/fleet_vehicle.dart';
 import '../../domain/vehicle_filter.dart';
-import '../../services/demo_session.dart';
 import '../../services/fleet_service.dart';
 import '../details/vehicle_details_screen.dart';
 import '../feedback.dart';
@@ -34,8 +34,8 @@ class _Slice {
 class _StatsScreenState extends State<StatsScreen> {
   final FleetService _service = FleetService.instance;
 
-  String? _agencyId;
-  List<Agency> _agencies = const [];
+  int? _agencyId;
+  List<User> _agencies = const [];
   FleetStats? _stats;
   List<DocumentAlert> _alerts = const [];
   bool _loading = true;
@@ -57,7 +57,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Future<void> _load() async {
     final request = ++_requestId;
-    final actor = DemoSession.instance.actor;
+    const actor = Actor.admin();
     try {
       final agencies = await _service.agencies();
       final stats = await _service.computeStats(agencyId: _agencyId);
@@ -80,7 +80,7 @@ class _StatsScreenState extends State<StatsScreen> {
     }
   }
 
-  void _selectAgency(String? id) {
+  void _selectAgency(int? id) {
     setState(() => _agencyId = id);
     _load();
   }
@@ -89,7 +89,7 @@ class _StatsScreenState extends State<StatsScreen> {
     showDocumentAlertsSheet(
       context,
       alerts: _alerts,
-      agencies: {for (final a in _agencies) a.id: a},
+      agencies: {for (final a in _agencies) if (a.id != null) a.id!: a},
       onOpenVehicle: (FleetVehicle vehicle) => Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => VehicleDetailsScreen(vehicleId: vehicle.id),
@@ -165,7 +165,7 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   Widget _buildAgencyFilter() {
-    Widget chip(String label, String? id) {
+    Widget chip(String label, int? id) {
       final selected = _agencyId == id;
       return Padding(
         padding: const EdgeInsets.only(right: 8),
@@ -193,7 +193,7 @@ class _StatsScreenState extends State<StatsScreen> {
       child: Row(
         children: [
           chip('Toute la flotte', null),
-          for (final agency in _agencies) chip(agency.name, agency.id),
+          for (final agency in _agencies) chip(agency.displayName, agency.id),
         ],
       ),
     );

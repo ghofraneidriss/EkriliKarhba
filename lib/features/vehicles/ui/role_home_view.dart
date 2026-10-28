@@ -3,15 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../domain/agency.dart';
+import '../../users/domain/user.dart';
+import '../domain/actor.dart';
 import '../domain/document_alert.dart';
 import '../domain/enums.dart';
 import '../domain/fleet_vehicle.dart';
 import '../domain/vehicle_category.dart';
 import '../domain/vehicle_filter.dart';
-import '../services/demo_session.dart';
 import '../services/fleet_service.dart';
-import 'admin/agencies_screen.dart';
 import 'admin/categories_screen.dart';
 import 'admin/stats_screen.dart';
 import 'admin/validation_screen.dart';
@@ -43,14 +42,13 @@ class RoleHomeView extends StatefulWidget {
 
 class _RoleHomeViewState extends State<RoleHomeView> {
   final FleetService _service = FleetService.instance;
-  final DemoSession _session = DemoSession.instance;
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   int _requestId = 0;
 
   VehicleFilter _filter = const VehicleFilter();
   List<FleetVehicle> _vehicles = const [];
-  Map<String, Agency> _agencies = const {};
+  Map<int, User> _agencies = const {};
   Map<String, VehicleCategory> _categories = const {};
   List<String> _cities = const [];
   FleetStats? _stats;
@@ -58,7 +56,10 @@ class _RoleHomeViewState extends State<RoleHomeView> {
   bool _loading = true;
   String? _error;
 
-  bool get _isAdmin => _session.actor.isAdmin;
+  final Set<String> _dismissedAlertKeys = {};
+
+  Actor get _actor => const Actor.admin();
+  bool get _isAdmin => true;
 
   @override
   void initState() {
@@ -77,7 +78,7 @@ class _RoleHomeViewState extends State<RoleHomeView> {
 
   Future<void> _load() async {
     final request = ++_requestId;
-    final actor = _session.actor;
+    final actor = _actor;
     try {
       final vehicles = await _service.search(_filter, actor);
       final stats = await _service.computeStats(agencyId: actor.agencyId);
@@ -137,11 +138,11 @@ class _RoleHomeViewState extends State<RoleHomeView> {
   /// Notifications pas encore fermées pendant cette connexion.
   List<DocumentAlert> get _newAlerts => [
         for (final alert in _alerts)
-          if (!_session.isAlertDismissed(alert.key)) alert,
+          if (!_dismissedAlertKeys.contains(alert.key)) alert,
       ];
 
   void _dismissAlerts() {
-    setState(() => _session.dismissAlerts(_alerts.map((a) => a.key)));
+    setState(() => _dismissedAlertKeys.addAll(_alerts.map((a) => a.key)));
   }
 
   void _openAlerts() {
@@ -187,7 +188,7 @@ class _RoleHomeViewState extends State<RoleHomeView> {
     if (!ok || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await _service.deleteVehicle(vehicle.id, _session.actor);
+      await _service.deleteVehicle(vehicle.id, _actor);
       showFleetSnack(messenger, '${vehicle.fullName} supprimé');
     } catch (e) {
       showFleetSnack(messenger, fleetErrorMessage(e), error: true);
@@ -268,9 +269,8 @@ class _RoleHomeViewState extends State<RoleHomeView> {
   }
 
   Widget _buildHeader() {
-    final agency = _session.agency;
     final total = _stats?.total;
-    final scope = agency?.name ?? 'Toutes les agences';
+    const scope = 'Toutes les agences';
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -311,11 +311,6 @@ class _RoleHomeViewState extends State<RoleHomeView> {
               color: AppColors.textPrimary,
             ),
           ),
-        ),
-        TextButton.icon(
-          onPressed: _session.signOut,
-          icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-          label: const Text('Changer'),
         ),
       ],
     );
@@ -420,7 +415,7 @@ class _RoleHomeViewState extends State<RoleHomeView> {
         icon: Icons.storefront_outlined,
         title: 'Agences',
         value: '${_agencies.length} agence(s)',
-        onTap: () => _push(const AgenciesScreen()),
+        onTap: () {},
       ),
       _ShortcutTile(
         icon: Icons.category_outlined,
@@ -642,7 +637,7 @@ class _RoleHomeViewState extends State<RoleHomeView> {
         FleetVehicleTile(
           vehicle: vehicle,
           categoryName: _categories[vehicle.categoryId]?.name,
-          agencyName: _isAdmin ? _agencies[vehicle.agencyId]?.name : null,
+          agencyName: _isAdmin ? _agencies[vehicle.agencyId]?.displayName : null,
           showPlate: true,
           showValidation: true,
           onTap: () => _openDetails(vehicle),

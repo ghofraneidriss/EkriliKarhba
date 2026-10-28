@@ -33,7 +33,7 @@ class FleetVehicle {
   });
 
   final String id;
-  final String agencyId;
+  final int agencyId;
   final String categoryId;
   final String brand;
   final String model;
@@ -61,24 +61,32 @@ class FleetVehicle {
   final String? rejectionReason;
   final String description;
 
-  /// Chemins des photos (assets/... ou fichiers) ; la première est la
-  /// photo principale.
+  /// Chemins des photos (assets locaux ou fichiers de l'appareil).
   final List<String> photos;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   String get fullName => '$brand $model';
+
+  /// Première photo ou null.
   String? get mainPhoto => photos.isEmpty ? null : photos.first;
 
-  /// Visible dans le catalogue client (hors contrôle de l'agence active).
-  bool get isListedForClients =>
-      validation == ValidationStatus.valide &&
-      status != VehicleStatus.maintenance &&
-      status != VehicleStatus.horsService &&
-      status != VehicleStatus.archive;
+  /// Un client peut-il voir ce véhicule dans le catalogue public ?
+  /// (doit être validé, non archivé, et ni hors service ni en maintenance).
+  bool get isListedForClients {
+    if (validation != ValidationStatus.valide) return false;
+    return status != VehicleStatus.archive &&
+        status != VehicleStatus.horsService &&
+        status != VehicleStatus.maintenance;
+  }
+
+  /// Peut-on louer ce véhicule dès maintenant ?
+  bool get isAvailableNow =>
+      isListedForClients && status == VehicleStatus.disponible;
 
   FleetVehicle copyWith({
-    String? agencyId,
+    String? id,
+    int? agencyId,
     String? categoryId,
     String? brand,
     String? model,
@@ -101,7 +109,7 @@ class FleetVehicle {
     DateTime? updatedAt,
   }) {
     return FleetVehicle(
-      id: id,
+      id: id ?? this.id,
       agencyId: agencyId ?? this.agencyId,
       categoryId: categoryId ?? this.categoryId,
       brand: brand ?? this.brand,
@@ -160,7 +168,9 @@ class FleetVehicle {
         : (jsonDecode(rawPhotos) as List<dynamic>).cast<String>();
     return FleetVehicle(
       id: map['id'] as String,
-      agencyId: map['agency_id'] as String,
+      agencyId: map['agency_id'] is int
+          ? map['agency_id'] as int
+          : int.parse(map['agency_id'].toString()),
       categoryId: map['category_id'] as String,
       brand: map['brand'] as String,
       model: map['model'] as String,

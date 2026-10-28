@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../domain/actor.dart';
 import '../../domain/fleet_dates.dart';
 import '../../domain/fleet_exceptions.dart';
 import '../../domain/validators.dart';
 import '../../domain/vehicle_category.dart';
-import '../../services/demo_session.dart';
 import '../../services/fleet_service.dart';
 import '../feedback.dart';
 import 'admin_widgets.dart';
@@ -103,7 +103,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
     final service = FleetService.instance;
-    final actor = DemoSession.instance.actor;
+    final actor = const Actor.admin();
     final min = _parse(_min.text)!;
     final max = _parse(_max.text)!;
     try {

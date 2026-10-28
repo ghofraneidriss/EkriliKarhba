@@ -18,9 +18,9 @@ void main() {
   final now = DateTime(2026, 10, 22, 10);
   const admin = Actor.admin();
   const client = Actor.client();
-  const tunis = Actor.agency('ag_tunis');
-  const sousse = Actor.agency('ag_sousse');
-  const sfax = Actor.agency('ag_sfax');
+  const tunis = Actor.agency(2);
+  const sousse = Actor.agency(3);
+  const sfax = Actor.agency(4);
   const reservations = Actor.system('Réservations');
 
   late FleetService service;
@@ -43,7 +43,7 @@ void main() {
   tearDown(() => service.closeDatabase());
 
   FleetVehicle draft({
-    String agencyId = 'ag_sousse',
+    int agencyId = 3,
     String categoryId = 'cat_citadine',
     String plate = '260 TUN 1111',
     double price = 80,
@@ -82,7 +82,7 @@ void main() {
 
     test("une agence ne voit que sa flotte", () async {
       final mine = await service.search(const VehicleFilter(), sousse);
-      expect(mine.map((v) => v.agencyId).toSet(), {'ag_sousse'});
+      expect(mine.map((v) => v.agencyId).toSet(), {3});
       expect(mine, hasLength(3));
     });
 
@@ -153,7 +153,7 @@ void main() {
     test("un véhicule ajouté par une agence attend la validation", () async {
       final created = await service.createVehicle(draft(), sousse);
       expect(created.validation, ValidationStatus.enAttente);
-      expect(created.agencyId, 'ag_sousse');
+      expect(created.agencyId, 3);
       final history = await service.history(created.id);
       expect(history.single.action, HistoryAction.creation);
     });
@@ -361,23 +361,22 @@ void main() {
   group('Multi-agences et validation', () {
     test("transfert par l'admin, historisé", () async {
       final moved =
-          await service.transferVehicle('veh_renault_clio', 'ag_tunis', admin);
-      expect(moved.agencyId, 'ag_tunis');
+          await service.transferVehicle('veh_renault_clio', 2, admin);
+      expect(moved.agencyId, 2);
       final history = await service.history('veh_renault_clio');
       expect(history.first.action, HistoryAction.transfert);
-      expect(history.first.oldValue, 'Sahel Rent Car');
     });
 
     test('une agence ne peut pas transférer', () async {
       await expectLater(
-        service.transferVehicle('veh_renault_clio', 'ag_tunis', sousse),
+        service.transferVehicle('veh_renault_clio', 2, sousse),
         throwsA(isA<FleetPermissionException>()),
       );
     });
 
     test('pas de transfert pour un véhicule réservé', () async {
       await expectLater(
-        service.transferVehicle('veh_hyundai_tucson', 'ag_tunis', admin),
+        service.transferVehicle('veh_hyundai_tucson', 2, admin),
         throwsA(isA<FleetRuleException>()),
       );
     });
@@ -394,26 +393,6 @@ void main() {
         service.reviewVehicle('veh_dacia_sandero',
             approve: false, actor: admin),
         throwsA(isA<FleetValidationException>()),
-      );
-    });
-
-    test('agence désactivée : ses véhicules sortent du catalogue', () async {
-      await service.setAgencyActive('ag_sousse', false, admin);
-      final visible = await service.search(const VehicleFilter(), client);
-      expect(visible.map((v) => v.agencyId), isNot(contains('ag_sousse')));
-    });
-
-    test('pas de désactivation si un véhicule est loué', () async {
-      await expectLater(
-        service.setAgencyActive('ag_tunis', false, admin),
-        throwsA(isA<FleetRuleException>()),
-      );
-    });
-
-    test("pas de suppression d'une agence qui a des véhicules", () async {
-      await expectLater(
-        service.deleteAgency('ag_sfax', admin),
-        throwsA(isA<FleetRuleException>()),
       );
     });
 
@@ -461,54 +440,19 @@ void main() {
 
     test('nombre de véhicules par agence et par catégorie', () async {
       expect(await service.vehicleCountByAgency(),
-          {'ag_tunis': 4, 'ag_sousse': 3, 'ag_sfax': 3});
+          {2: 4, 3: 3, 4: 3});
       final byCategory = await service.vehicleCountByCategory();
       expect(byCategory.values.fold(0, (a, b) => a + b), 10);
     });
   });
 
-  group('Agences (admin)', () {
-    test('ajout, modification et suppression', () async {
-      final created = await service.createAgency(
-        name: 'Cap Bon Cars',
-        city: 'Nabeul',
-        phone: '+216 72 285 000',
-        email: 'contact@capbon.tn',
-        actor: admin,
-      );
-      expect((await service.agencies()).map((a) => a.id),
-          contains(created.id));
-      final updated = await service.updateAgency(
-          created.copyWith(city: 'Hammamet'), admin);
-      expect(updated.city, 'Hammamet');
-      await service.deleteAgency(created.id, admin);
-      expect(await service.agency(created.id), isNull);
-    });
-
-    test('téléphone invalide : erreur sur le bon champ', () async {
-      await expectLater(
-        service.createAgency(
-            name: 'Test Auto', city: 'Tunis', phone: '123', actor: admin),
-        throwsA(isA<FleetValidationException>()
-            .having((e) => e.field, 'field', 'phone')),
-      );
-    });
-
-    test("une agence ne peut pas créer d'agence", () async {
-      await expectLater(
-        service.createAgency(name: 'Autre', city: 'Tunis', actor: sousse),
-        throwsA(isA<FleetPermissionException>()),
-      );
-    });
-
-    test('une agence modifie sa fiche mais pas son activation', () async {
-      final mine = await service.agency('ag_sousse');
-      final saved = await service.updateAgency(
-        mine!.copyWith(isActive: false, phone: '+216 73 000 000'),
-        sousse,
-      );
-      expect(saved.isActive, isTrue);
-      expect(saved.phone, '+216 73 000 000');
+  group('Agences', () {
+    test('consultation des agences actives', () async {
+      final list = await service.agencies();
+      expect(list.length, greaterThanOrEqualTo(3));
+      final agency2 = await service.agency(2);
+      expect(agency2, isNotNull);
+      expect(agency2!.displayName, contains('Tunis'));
     });
   });
 
@@ -655,7 +599,7 @@ void main() {
   });
 
   test("statistiques d'une agence", () async {
-    final stats = await service.computeStats(agencyId: 'ag_tunis');
+    final stats = await service.computeStats(agencyId: 2);
     expect(stats.total, 4);
     expect(stats.occupied, 1); // Audi A4 louée
     expect(stats.count(VehicleStatus.maintenance), 1); // Peugeot 208

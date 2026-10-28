@@ -3,11 +3,14 @@ import 'package:sqflite/sqflite.dart';
 
 import 'seed_data.dart';
 
-/// Base SQLite du module Véhicules (fichier `ekrili_vehicles.db`).
+/// Base SQLite de l'application (fichier `ekrili_vehicles.db`).
 ///
-/// Tables : agencies, categories, vehicles, vehicle_documents,
-/// unavailabilities, vehicle_history, favorites.
-/// Les données de démonstration sont insérées à la création de la base.
+/// Version 2 :
+/// - Suppression de la table agencies
+/// - Création de la table users (avec rôles ADMIN, AGENCE, CLIENT)
+/// - Création de la table user_history (audit trail)
+/// - Table vehicles : FK agency_id INTEGER REFERENCES users(id)
+/// - PRAGMA foreign_keys = ON
 class FleetDatabase {
   FleetDatabase({
     DatabaseFactory? factory,
@@ -19,7 +22,7 @@ class FleetDatabase {
         _clock = clock ?? DateTime.now;
 
   static const String fileName = 'ekrili_vehicles.db';
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
   static const String _memoryPath = ':memory:';
 
   final DatabaseFactory? _factory;
@@ -45,6 +48,13 @@ class FleetDatabase {
           await _createSchema(db);
           if (withSeedData) await SeedData.insert(db, _clock());
         },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 2) {
+            await _dropAllTables(db);
+            await _createSchema(db);
+            if (withSeedData) await SeedData.insert(db, _clock());
+          }
+        },
       ),
     );
   }
@@ -55,19 +65,52 @@ class FleetDatabase {
     if (opening != null) await (await opening).close();
   }
 
+  static Future<void> _dropAllTables(Database db) async {
+    await db.execute('DROP TABLE IF EXISTS favorites');
+    await db.execute('DROP TABLE IF EXISTS vehicle_history');
+    await db.execute('DROP TABLE IF EXISTS unavailabilities');
+    await db.execute('DROP TABLE IF EXISTS vehicle_documents');
+    await db.execute('DROP TABLE IF EXISTS vehicles');
+    await db.execute('DROP TABLE IF EXISTS categories');
+    await db.execute('DROP TABLE IF EXISTS agencies');
+    await db.execute('DROP TABLE IF EXISTS user_history');
+    await db.execute('DROP TABLE IF EXISTS users');
+  }
+
   static Future<void> _createSchema(Database db) async {
     final batch = db.batch();
+
     batch.execute('''
-      CREATE TABLE agencies (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        city TEXT NOT NULL,
-        address TEXT NOT NULL DEFAULT '',
-        phone TEXT NOT NULL DEFAULT '',
-        email TEXT NOT NULL DEFAULT '',
-        is_active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nom TEXT NOT NULL,
+        prenom TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        mot_de_passe TEXT NOT NULL,
+        password_salt TEXT NOT NULL,
+        telephone TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('ADMIN', 'AGENCE', 'CLIENT')),
+        statut TEXT NOT NULL CHECK (statut IN ('ACTIF', 'DESACTIVE', 'BANNI')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        niveau_acces TEXT,
+        nom_agence TEXT,
+        adresse_agence TEXT
       )''');
+
+    batch.execute('''
+      CREATE TABLE user_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        timestamp TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        action TEXT NOT NULL,
+        field TEXT,
+        old_value TEXT,
+        new_value TEXT,
+        comment TEXT
+      )''');
+
     batch.execute('''
       CREATE TABLE categories (
         id TEXT PRIMARY KEY,
@@ -77,10 +120,11 @@ class FleetDatabase {
         max_price REAL NOT NULL,
         is_active INTEGER NOT NULL DEFAULT 1
       )''');
+
     batch.execute('''
       CREATE TABLE vehicles (
         id TEXT PRIMARY KEY,
-        agency_id TEXT NOT NULL REFERENCES agencies(id),
+        agency_id INTEGER NOT NULL REFERENCES users(id),
         category_id TEXT NOT NULL REFERENCES categories(id),
         brand TEXT NOT NULL,
         model TEXT NOT NULL,
@@ -102,6 +146,7 @@ class FleetDatabase {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )''');
+
     batch.execute('''
       CREATE TABLE vehicle_documents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,6 +156,7 @@ class FleetDatabase {
         expiry_date TEXT,
         note TEXT NOT NULL DEFAULT ''
       )''');
+
     batch.execute('''
       CREATE TABLE unavailabilities (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -119,7 +165,7 @@ class FleetDatabase {
         end_date TEXT NOT NULL,
         reason TEXT NOT NULL DEFAULT 'Autre'
       )''');
-    // Pas de clé étrangère : l'historique survit à la suppression.
+
     batch.execute('''
       CREATE TABLE vehicle_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -132,20 +178,23 @@ class FleetDatabase {
         new_value TEXT,
         comment TEXT
       )''');
+
     batch.execute('''
       CREATE TABLE favorites (
         vehicle_id TEXT PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
         created_at TEXT NOT NULL
       )''');
+
+    batch.execute('CREATE INDEX idx_users_role ON users(role)');
+    batch.execute('CREATE INDEX idx_users_statut ON users(statut)');
     batch.execute('CREATE INDEX idx_vehicles_agency ON vehicles(agency_id)');
     batch.execute('CREATE INDEX idx_vehicles_category ON vehicles(category_id)');
     batch.execute('CREATE INDEX idx_vehicles_status ON vehicles(status)');
-    batch.execute(
-        'CREATE INDEX idx_unavail_vehicle ON unavailabilities(vehicle_id)');
-    batch.execute(
-        'CREATE INDEX idx_history_vehicle ON vehicle_history(vehicle_id)');
-    batch.execute(
-        'CREATE INDEX idx_documents_vehicle ON vehicle_documents(vehicle_id)');
+    batch.execute('CREATE INDEX idx_unavail_vehicle ON unavailabilities(vehicle_id)');
+    batch.execute('CREATE INDEX idx_history_vehicle ON vehicle_history(vehicle_id)');
+    batch.execute('CREATE INDEX idx_documents_vehicle ON vehicle_documents(vehicle_id)');
+    batch.execute('CREATE INDEX idx_history_user ON user_history(user_id)');
+
     await batch.commit(noResult: true);
   }
 }

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../data/fleet_database.dart';
 import '../data/fleet_repository.dart';
 import '../domain/actor.dart';
-import '../domain/agency.dart';
+import '../../users/domain/user.dart';
 import '../domain/document_alert.dart';
 import '../domain/enums.dart';
 import '../domain/fleet_dates.dart';
@@ -50,6 +50,7 @@ class FleetService extends ChangeNotifier {
 
   final FleetRepository _repo;
   final DateTime Function() _clock;
+  int _idSequence = 0;
   Future<void>? _ready;
 
   /// Ouvre la base (création + données de démo au premier lancement)
@@ -101,24 +102,24 @@ class FleetService extends ChangeNotifier {
     if (actor.isClient) {
       if (!vehicle.isListedForClients) return null;
       final agency = await _repo.getAgency(vehicle.agencyId);
-      if (agency == null || !agency.isActive) return null;
+      if (agency == null || !agency.isActif) return null;
     }
     return vehicle;
   }
 
-  Future<List<Agency>> agencies({bool activeOnly = false}) async {
+  Future<List<User>> agencies({bool activeOnly = false}) async {
     await ensureReady();
     return _repo.getAgencies(activeOnly: activeOnly);
   }
 
-  Future<Agency?> agency(String id) async {
+  Future<User?> agency(int id) async {
     await ensureReady();
     return _repo.getAgency(id);
   }
 
-  Future<Map<String, Agency>> agencyMap() async {
+  Future<Map<int, User>> agencyMap() async {
     final list = await agencies();
-    return {for (final a in list) a.id: a};
+    return {for (final a in list) a.id!: a};
   }
 
   Future<List<VehicleCategory>> categories({bool activeOnly = false}) async {
@@ -138,9 +139,8 @@ class FleetService extends ChangeNotifier {
 
   /// Villes des agences actives, triées.
   Future<List<String>> cities() async {
-    final list = await agencies(activeOnly: true);
-    final result = list.map((a) => a.city).toSet().toList()..sort();
-    return result;
+    await ensureReady();
+    return _repo.getCities();
   }
 
   Future<List<VehicleDocument>> documents(String vehicleId) async {
@@ -159,9 +159,9 @@ class FleetService extends ChangeNotifier {
   }
 
   /// Nombre de véhicules (archivés compris) par agence : id -> nombre.
-  Future<Map<String, int>> vehicleCountByAgency() async {
+  Future<Map<int, int>> vehicleCountByAgency() async {
     await ensureReady();
-    final counts = <String, int>{};
+    final counts = <int, int>{};
     for (final v in await _repo.getVehicles()) {
       counts.update(v.agencyId, (n) => n + 1, ifAbsent: () => 1);
     }
@@ -203,8 +203,8 @@ class FleetService extends ChangeNotifier {
           '${FleetFormat.dt(category.maxPricePerDay)})');
     }
     final agency = await _repo.getAgency(vehicle.agencyId);
-    if (agency != null && !agency.isActive) {
-      problems.add('Agence ${agency.name} désactivée');
+    if (agency != null && !agency.isActif) {
+      problems.add('Agence ${agency.displayName} désactivée');
     }
     return problems;
   }
@@ -219,9 +219,9 @@ class FleetService extends ChangeNotifier {
     if (agency == null) {
       throw const FleetValidationException('agencyId', 'Agence introuvable.');
     }
-    if (!agency.isActive) {
+    if (!agency.isActif) {
       throw FleetRuleException(
-          "L'agence ${agency.name} est désactivée : impossible d'ajouter "
+          "L'agence ${agency.displayName} est désactivée : impossible d'ajouter "
           'un véhicule.');
     }
     final category = await _requireCategory(draft.categoryId);
@@ -252,7 +252,7 @@ class FleetService extends ChangeNotifier {
     };
     final now = _clock();
     final vehicle = FleetVehicle(
-      id: 'veh_${now.microsecondsSinceEpoch}',
+      id: 'veh_${now.microsecondsSinceEpoch}_${++_idSequence}',
       agencyId: candidate.agencyId,
       categoryId: candidate.categoryId,
       brand: candidate.brand,
@@ -555,7 +555,7 @@ class FleetService extends ChangeNotifier {
   /// Transfert d'un véhicule vers une autre agence (administrateur).
   Future<FleetVehicle> transferVehicle(
     String vehicleId,
-    String toAgencyId,
+    int toAgencyId,
     Actor actor, {
     String? comment,
   }) async {
@@ -579,8 +579,8 @@ class FleetService extends ChangeNotifier {
     if (target == null) {
       throw const FleetNotFoundException('Agence de destination introuvable.');
     }
-    if (!target.isActive) {
-      throw FleetRuleException("L'agence ${target.name} est désactivée.");
+    if (!target.isActif) {
+      throw FleetRuleException("L'agence « ${target.displayName} » est désactivée.");
     }
     final booking = await _upcomingReservation(vehicleId);
     if (booking != null) {
@@ -600,8 +600,8 @@ class FleetService extends ChangeNotifier {
           actor,
           HistoryAction.transfert,
           field: 'Agence',
-          oldValue: source?.name ?? current.agencyId,
-          newValue: target.name,
+          oldValue: source?.displayName ?? '${current.agencyId}',
+          newValue: target.displayName,
           comment: comment,
         ),
         txn: txn,
@@ -729,7 +729,7 @@ class FleetService extends ChangeNotifier {
   /// (ou une agence avec [agencyId]). Les véhicules archivés sont ignorés.
   Future<List<DocumentAlert>> documentAlerts(
     Actor actor, {
-    String? agencyId,
+    int? agencyId,
     int withinDays = VehicleDocument.warningDays,
   }) async {
     await ensureReady();
@@ -881,7 +881,7 @@ class FleetService extends ChangeNotifier {
       return 'Véhicule en statut « ${vehicle.status.label} ».';
     }
     final agency = await _repo.getAgency(vehicle.agencyId);
-    if (agency == null || !agency.isActive) return 'Agence indisponible.';
+    if (agency == null || !agency.isActif) return 'Agence indisponible.';
     final from = FleetDates.dayOnly(start);
     final to = FleetDates.dayOnly(end);
     if (to.isBefore(from)) return 'Dates invalides.';
@@ -934,103 +934,6 @@ class FleetService extends ChangeNotifier {
     final visible =
         await search(const VehicleFilter(), const Actor.client());
     return visible.where((v) => ids.contains(v.id)).toList();
-  }
-
-  // ================================================================ Agences
-
-  Future<Agency> createAgency({
-    required String name,
-    required String city,
-    String address = '',
-    String phone = '',
-    String email = '',
-    required Actor actor,
-  }) async {
-    await ensureReady();
-    _requireAdmin(actor, 'créer une agence');
-    _validateAgency(name: name, city: city, phone: phone, email: email);
-    final now = _clock();
-    final agency = Agency(
-      id: 'ag_${now.microsecondsSinceEpoch}',
-      name: name.trim(),
-      city: city.trim(),
-      address: address.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
-      createdAt: now,
-    );
-    await _repo.insertAgency(agency);
-    notifyListeners();
-    return agency;
-  }
-
-  /// L'admin modifie toute agence ; une agence modifie sa propre fiche.
-  /// L'activation ne change pas ici : elle passe par [setAgencyActive],
-  /// qui vérifie qu'aucun véhicule n'est occupé.
-  Future<Agency> updateAgency(Agency agency, Actor actor) async {
-    await ensureReady();
-    final current = await _repo.getAgency(agency.id);
-    if (current == null) {
-      throw const FleetNotFoundException('Agence introuvable.');
-    }
-    if (actor.isClient || (actor.isAgency && actor.agencyId != agency.id)) {
-      throw const FleetPermissionException(
-          'Vous ne pouvez modifier que la fiche de votre agence.');
-    }
-    _validateAgency(
-      name: agency.name,
-      city: agency.city,
-      phone: agency.phone,
-      email: agency.email,
-    );
-    final saved = agency.copyWith(
-      name: agency.name.trim(),
-      city: agency.city.trim(),
-      address: agency.address.trim(),
-      phone: agency.phone.trim(),
-      email: agency.email.trim(),
-      isActive: current.isActive,
-    );
-    await _repo.updateAgency(saved);
-    notifyListeners();
-    return saved;
-  }
-
-  Future<Agency> setAgencyActive(
-      String agencyId, bool active, Actor actor) async {
-    await ensureReady();
-    _requireAdmin(actor, 'activer ou désactiver une agence');
-    final current = await _repo.getAgency(agencyId);
-    if (current == null) {
-      throw const FleetNotFoundException('Agence introuvable.');
-    }
-    if (!active) {
-      final engaged = (await _repo.getVehicles(agencyId: agencyId))
-          .where((v) => v.status.isEngaged)
-          .length;
-      if (engaged > 0) {
-        throw FleetRuleException(
-            '$engaged véhicule(s) de cette agence sont occupés : '
-            'désactivation impossible pour le moment.');
-      }
-    }
-    final saved = current.copyWith(isActive: active);
-    await _repo.updateAgency(saved);
-    notifyListeners();
-    return saved;
-  }
-
-  Future<void> deleteAgency(String agencyId, Actor actor) async {
-    await ensureReady();
-    _requireAdmin(actor, 'supprimer une agence');
-    final count = await _repo.countVehiclesOfAgency(agencyId);
-    if (count > 0) {
-      throw FleetRuleException(
-          'Cette agence possède $count véhicule(s) : transférez-les ou '
-          "désactivez l'agence.");
-    }
-    await _repo.deleteAgency(agencyId);
-    notifyListeners();
   }
 
   // ============================================================= Catégories
@@ -1103,7 +1006,7 @@ class FleetService extends ChangeNotifier {
   // ============================================================ Statistiques
 
   /// Chiffres de la flotte entière, ou d'une seule agence.
-  Future<FleetStats> computeStats({String? agencyId}) async {
+  Future<FleetStats> computeStats({int? agencyId}) async {
     await ensureReady();
     final vehicles =
         await _repo.getVehicles(agencyId: agencyId, includeArchived: false);
@@ -1111,7 +1014,7 @@ class FleetService extends ChangeNotifier {
       for (final c in await _repo.getCategories()) c.id: c.name,
     };
     final agencyNames = {
-      for (final a in await _repo.getAgencies()) a.id: a.name,
+      for (final a in await _repo.getAgencies()) a.id!: a.displayName,
     };
     final byStatus = <VehicleStatus, int>{};
     final byCategory = <String, int>{};
@@ -1214,22 +1117,6 @@ class FleetService extends ChangeNotifier {
               '${FleetFormat.dt(category.minPricePerDay)} et '
               '${FleetFormat.dt(category.maxPricePerDay)} par jour.');
     }
-  }
-
-  void _validateAgency({
-    required String name,
-    required String city,
-    required String phone,
-    required String email,
-  }) {
-    void check(String field, String? error) {
-      if (error != null) throw FleetValidationException(field, error);
-    }
-
-    check('name', FleetValidators.name(name, "Nom de l'agence"));
-    check('city', FleetValidators.name(city, 'Ville'));
-    check('phone', FleetValidators.phone(phone));
-    check('email', FleetValidators.email(email));
   }
 
   void _validateCategory(String name, double min, double max) {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../domain/actor.dart';
 import '../../domain/enums.dart';
 import '../../domain/fleet_vehicle.dart';
-import '../../services/demo_session.dart';
 import '../../services/fleet_service.dart';
 import '../feedback.dart';
 
@@ -68,7 +68,7 @@ class _StatusSheetState extends State<_StatusSheet> {
       await FleetService.instance.changeStatus(
         widget.vehicle.id,
         next,
-        DemoSession.instance.actor,
+        const Actor.admin(),
         comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
       );
       if (!mounted) return;

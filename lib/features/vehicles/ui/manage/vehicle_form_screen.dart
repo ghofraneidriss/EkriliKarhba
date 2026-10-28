@@ -3,15 +3,14 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../data/brand_catalog.dart';
+import '../../../users/domain/user.dart';
 import '../../domain/actor.dart';
-import '../../domain/agency.dart';
 import '../../domain/enums.dart';
 import '../../domain/fleet_dates.dart';
 import '../../domain/fleet_exceptions.dart';
 import '../../domain/fleet_vehicle.dart';
 import '../../domain/validators.dart';
 import '../../domain/vehicle_category.dart';
-import '../../services/demo_session.dart';
 import '../../services/fleet_service.dart';
 import '../feedback.dart';
 import 'photo_picker_field.dart';
@@ -63,7 +62,7 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
   final TextEditingController _description = TextEditingController();
 
   String? _categoryId;
-  String? _agencyId;
+  int? _agencyId;
   FuelType _fuel = FuelType.essence;
   Transmission _transmission = Transmission.manuelle;
   VehicleStatus _initialStatus = VehicleStatus.disponible;
@@ -71,7 +70,7 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
 
   FleetVehicle? _original;
   List<VehicleCategory> _categories = const [];
-  List<Agency> _agencies = const [];
+  List<User> _agencies = const [];
   List<String> _makes = BrandCatalog.popular.keys.toList();
   List<String> _models = const [];
 
@@ -82,7 +81,7 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
   final Map<String, String> _serverErrors = {};
   AutovalidateMode _autovalidate = AutovalidateMode.disabled;
 
-  Actor get _actor => DemoSession.instance.actor;
+  Actor get _actor => const Actor.admin();
   bool get _editing => widget.vehicleId != null;
 
   VehicleCategory? get _selectedCategory {
@@ -131,7 +130,7 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
       final categories = await _service.categories();
       final agencies = _actor.isAdmin
           ? await _service.agencies(activeOnly: true)
-          : const <Agency>[];
+          : const <User>[];
       FleetVehicle? original;
       if (_editing) {
         original = await _service.getVehicleFor(widget.vehicleId!, _actor);
@@ -411,7 +410,7 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
               const SizedBox(height: 18),
               if (_actor.isAdmin && !_editing) ...[
                 _label('Agence *'),
-                DropdownButtonFormField<String>(
+                DropdownButtonFormField<int>(
                   initialValue: _agencyId,
                   isExpanded: true,
                   decoration: _decoration(),
@@ -419,7 +418,7 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
                     for (final a in _agencies)
                       DropdownMenuItem(
                         value: a.id,
-                        child: Text('${a.name} · ${a.city}'),
+                        child: Text('${a.displayName} · ${a.adresseAgence ?? ''}'),
                       ),
                   ],
                   onChanged: (v) => setState(() => _agencyId = v),

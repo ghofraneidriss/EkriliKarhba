@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../domain/actor.dart';
 import '../../domain/fleet_dates.dart';
 import '../../domain/vehicle_category.dart';
-import '../../services/demo_session.dart';
 import '../../services/fleet_service.dart';
 import '../feedback.dart';
 import 'admin_widgets.dart';
@@ -86,7 +86,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     try {
       await _service.updateCategory(
         category.copyWith(isActive: active),
-        DemoSession.instance.actor,
+        const Actor.admin(),
       );
       showFleetSnack(
         messenger,
@@ -119,7 +119,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     );
     if (!ok || !mounted) return;
     try {
-      await _service.deleteCategory(category.id, DemoSession.instance.actor);
+      await _service.deleteCategory(category.id, const Actor.admin());
       showFleetSnack(messenger, 'Catégorie ${category.name} supprimée');
     } catch (e) {
       showFleetSnack(messenger, fleetErrorMessage(e), error: true);

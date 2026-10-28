@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../domain/agency.dart';
+import '../../../users/domain/user.dart';
+import '../../domain/actor.dart';
 import '../../domain/enums.dart';
 import '../../domain/fleet_dates.dart';
 import '../../domain/fleet_vehicle.dart';
 import '../../domain/vehicle_category.dart';
 import '../../domain/vehicle_filter.dart';
-import '../../services/demo_session.dart';
 import '../../services/fleet_service.dart';
 import '../details/vehicle_details_screen.dart';
 import '../feedback.dart';
@@ -38,7 +38,7 @@ Future<bool> reviewVehicleAction(
       vehicle.id,
       approve: approve,
       reason: reason,
-      actor: DemoSession.instance.actor,
+      actor: const Actor.admin(),
     );
     showFleetSnack(
       messenger,
@@ -73,7 +73,7 @@ class _ValidationScreenState extends State<ValidationScreen> {
   List<FleetVehicle> _pending = const [];
   List<FleetVehicle> _refused = const [];
   Map<String, List<String>> _problems = const {};
-  Map<String, Agency> _agencies = const {};
+  Map<int, User> _agencies = const {};
   Map<String, VehicleCategory> _categories = const {};
   final Set<String> _busy = {};
   bool _loading = true;
@@ -95,7 +95,7 @@ class _ValidationScreenState extends State<ValidationScreen> {
 
   Future<void> _load() async {
     final request = ++_requestId;
-    final actor = DemoSession.instance.actor;
+    const actor = Actor.admin();
     try {
       final pending = await _service.search(
         const VehicleFilter(validation: ValidationStatus.enAttente),
@@ -242,7 +242,7 @@ class _ReviewCard extends StatelessWidget {
   });
 
   final FleetVehicle vehicle;
-  final Agency? agency;
+  final User? agency;
   final VehicleCategory? category;
   final List<String> problems;
   final bool busy;
@@ -257,7 +257,7 @@ class _ReviewCard extends StatelessWidget {
     final cat = category;
     final added = [
       'Ajouté le ${FleetDates.display(vehicle.createdAt)}',
-      if (agency != null) 'par ${agency!.name}',
+      if (agency != null) 'par ${agency!.displayName}',
     ].join(' ');
     final price = cat == null
         ? FleetFormat.dt(vehicle.pricePerDay)
@@ -270,7 +270,7 @@ class _ReviewCard extends StatelessWidget {
         FleetVehicleTile(
           vehicle: vehicle,
           categoryName: cat?.name,
-          agencyName: agency?.name,
+          agencyName: agency?.displayName,
           showPlate: true,
           onTap: onOpen,
         ),

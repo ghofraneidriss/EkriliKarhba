@@ -2,25 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 
-/// Profil avec lequel on utilise le module Véhicules.
-///
-/// En attendant le vrai login du module Utilisateurs, le profil est choisi
-/// dans un sélecteur de démonstration (voir DemoSession).
-enum UserRole {
-  client('Client', 'Consulter, rechercher et comparer les véhicules',
-      Icons.person_outline_rounded),
-  agence('Agence', 'Gérer la flotte de mon agence',
-      Icons.storefront_outlined),
-  admin('Administrateur', 'Superviser toutes les agences et la flotte',
-      Icons.admin_panel_settings_outlined);
-
-  const UserRole(this.label, this.description, this.icon);
-
-  final String label;
-  final String description;
-  final IconData icon;
-}
-
 /// Cycle de vie d'un véhicule.
 ///
 /// Les changements autorisés sont définis dans [allowedNext] :

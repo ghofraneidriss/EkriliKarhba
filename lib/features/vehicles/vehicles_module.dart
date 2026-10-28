@@ -5,7 +5,6 @@
 library;
 
 export 'api/vehicle_api.dart';
-export 'domain/agency.dart';
 export 'domain/enums.dart';
 export 'domain/fleet_exceptions.dart';
 export 'domain/fleet_vehicle.dart';

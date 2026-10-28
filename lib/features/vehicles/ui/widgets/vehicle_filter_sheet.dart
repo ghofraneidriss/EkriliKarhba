@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../domain/agency.dart';
+import '../../../users/domain/user.dart';
 import '../../domain/enums.dart';
 import '../../domain/fleet_dates.dart';
 import '../../domain/vehicle_category.dart';
@@ -15,7 +15,7 @@ Future<VehicleFilter?> showVehicleFilterSheet(
   required VehicleFilter current,
   required List<VehicleCategory> categories,
   required List<String> cities,
-  List<Agency> agencies = const [],
+  List<User> agencies = const [],
 }) {
   return showModalBottomSheet<VehicleFilter>(
     context: context,
@@ -48,7 +48,7 @@ class _FilterSheet extends StatefulWidget {
   final List<String> cities;
 
   /// Liste non vide : filtre par agence (vue administrateur).
-  final List<Agency> agencies;
+  final List<User> agencies;
 
   @override
   State<_FilterSheet> createState() => _FilterSheetState();
@@ -209,7 +209,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                     _chip('Toutes', _filter.agencyId == null,
                         () => _filter.copyWith(clearAgency: true)),
                     for (final agency in widget.agencies)
-                      _chip(agency.name, _filter.agencyId == agency.id,
+                      _chip(agency.displayName, _filter.agencyId == agency.id,
                           () => _filter.copyWith(agencyId: agency.id)),
                   ],
                 ),

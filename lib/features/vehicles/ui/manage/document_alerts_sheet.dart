@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../domain/agency.dart';
+import '../../../users/domain/user.dart';
 import '../../domain/document_alert.dart';
 import '../../domain/fleet_vehicle.dart';
 
@@ -18,7 +18,7 @@ Color alertBackground(DocumentAlert alert) =>
 Future<void> showDocumentAlertsSheet(
   BuildContext context, {
   required List<DocumentAlert> alerts,
-  Map<String, Agency> agencies = const {},
+  Map<int, User> agencies = const {},
   required void Function(FleetVehicle vehicle) onOpenVehicle,
 }) {
   return showModalBottomSheet<void>(
@@ -49,7 +49,7 @@ class _DocumentAlertsSheet extends StatelessWidget {
   });
 
   final List<DocumentAlert> alerts;
-  final Map<String, Agency> agencies;
+  final Map<int, User> agencies;
   final void Function(FleetVehicle vehicle) onOpenVehicle;
 
   @override
@@ -117,7 +117,7 @@ class _DocumentAlertsSheet extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: DocumentAlertRow(
         alert: alert,
-        agencyName: agencies[alert.vehicle.agencyId]?.name,
+        agencyName: agencies[alert.vehicle.agencyId]?.displayName,
         onTap: () => onOpenVehicle(alert.vehicle),
       ),
     );

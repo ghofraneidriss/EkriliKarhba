@@ -23,7 +23,7 @@ class VehicleFilter {
   final String query;
   final Set<VehicleStatus> statuses;
   final String? categoryId;
-  final String? agencyId;
+  final int? agencyId;
   final String? city;
   final FuelType? fuel;
   final Transmission? transmission;
@@ -60,7 +60,7 @@ class VehicleFilter {
     String? query,
     Set<VehicleStatus>? statuses,
     String? categoryId,
-    String? agencyId,
+    int? agencyId,
     String? city,
     FuelType? fuel,
     Transmission? transmission,
