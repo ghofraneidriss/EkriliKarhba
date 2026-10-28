@@ -33,15 +33,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _fillDemo(String email, String password) {
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = password;
-      _errorMessage = null;
-      _fieldErrors = const {};
-    });
-  }
-
   Future<void> _submit() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -273,45 +264,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Raccourcis comptes de démo
-                  const Text(
-                    'Comptes de démonstration (1 clic) :',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ActionChip(
-                        avatar: const Icon(Icons.shield_outlined, size: 16, color: AppColors.primaryBlue),
-                        label: const Text('Admin (Yassine)', style: TextStyle(fontSize: 11)),
-                        backgroundColor: AppColors.blueLight,
-                        onPressed: () => _fillDemo('admin@ekrili.tn', 'Admin1234'),
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.store_outlined, size: 16, color: AppColors.orange),
-                        label: const Text('Agence Tunis', style: TextStyle(fontSize: 11)),
-                        backgroundColor: AppColors.orangeLight,
-                        onPressed: () => _fillDemo('contact@automobility.tn', 'Agence1234'),
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.person_outline, size: 16, color: AppColors.green),
-                        label: const Text('Client (Karim)', style: TextStyle(fontSize: 11)),
-                        backgroundColor: AppColors.greenLight,
-                        onPressed: () => _fillDemo('karim@gmail.com', 'Client1234'),
-                      ),
-                    ],
                   ),
                 ],
               ),

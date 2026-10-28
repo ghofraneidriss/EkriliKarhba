@@ -42,6 +42,5 @@ void main() {
     expect(find.text('Ekrili Karhba'), findsOneWidget);
     expect(find.text('Connexion à votre espace'), findsOneWidget);
     expect(find.text('Se connecter'), findsOneWidget);
-    expect(find.text('Comptes de démonstration (1 clic) :'), findsOneWidget);
   });
 }
